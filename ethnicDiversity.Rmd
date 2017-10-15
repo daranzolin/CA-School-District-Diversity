@@ -1,11 +1,12 @@
 ---
-title: "Teacher and Student Diversity in California"
+title: "Student and Teacher Diversity in California"
 runtime: shiny
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
     theme: yeti
+    source_code: https://github.com/daranzolin/CA-School-District-Diversity
 ---
 
 ```{r setup, include=FALSE}
@@ -35,10 +36,13 @@ Inputs {.sidebar}
 ```
 
 <br>
-The purpose of this app is to explore ethnic diversity among students and teachers in California Unified Districts. To begin, hover over and click the map below. The map is shaded to highlight the sharpest disparities in student and teacher populations: lighter districts have more severe discrepancies. 
+The purpose of this app is to explore ethnic diversity among students and teachers in California. To begin, hover over and click the map below. The map is shaded to highlight the sharpest disparities in student and teacher populations: lighter districts have more severe discrepancies. 
 <br>
 <br>
 Click the **About** page for more information about the `Difference` measure.
+<br>
+<br>
+Note: Some district data is missing from this application.
 
 
 
@@ -72,7 +76,7 @@ plotOutput("district_plot")
 Row
 -------------------------------------
    
-### California Unified Districts
+### California School Districts
 
 ```{r}
 
@@ -105,7 +109,7 @@ leafletOutput("map")
 
 ```   
     
-### District EDIs, 2015-2016 
+### District Differences, 2015-2016 
 
 ```{r}
 
