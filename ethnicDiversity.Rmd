@@ -1,0 +1,150 @@
+---
+title: "Teacher and Student Diversity in California"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    theme: yeti
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(leaflet)
+library(tidyverse)
+library(shiny)
+chart_data <- readRDS("all_chart_data.rds")
+map_data <- readRDS("map_data.rds")
+diffs <- readRDS("diffs.rds")
+
+ddata <- reactive({
+  d <- if(is.null(click_tract())) "Santa Clara Unified" else click_tract()
+  filter(chart_data, DISTRICT == d)
+})
+
+```
+
+Dashboard
+=====================================  
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+
+```
+
+<br>
+The purpose of this app is to explore ethnic diversity among students and teachers in California Unified Districts. To begin, hover over and click the map below. The map is shaded to highlight the sharpest disparities in student and teacher populations: lighter districts have more severe discrepancies. 
+<br>
+<br>
+Click the **About** page for more information about the `Difference` measure.
+
+
+
+
+  
+Row
+-------------------------------------
+
+### 
+
+```{r}
+output$district_plot <- renderPlot({
+    ggplot(ddata(), aes(ETHNIC, Percentage, fill = Member)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(stat = "identity", position = position_dodge(width = 1), 
+            aes(label = paste0(Percentage, "%")), vjust = -1, color = "black") +
+  labs(x = "",
+       y = "", 
+       title = paste("Ethnic Diversity in", click_tract()),
+       subtitle = "2015-2016 School Year", 
+       fill = "") +
+    ylim(0,100) +
+    scale_fill_manual(values = c("blue", "lightblue")) +
+  ggthemes::theme_tufte() +
+  theme(axis.text.x = element_text(colour="grey20",size=11,vjust=.5)) 
+})
+
+plotOutput("district_plot")
+```
+
+Row
+-------------------------------------
+   
+### California Unified Districts
+
+```{r}
+
+output$map <- renderLeaflet({
+  pal <- colorNumeric("plasma", NULL)
+leaflet(map_data) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(fillColor = ~pal(total_abs_diff),
+              color = "black",
+              weight = 0.5,
+              highlightOptions = highlightOptions(color = "red", weight = 2,
+                                                  bringToFront = TRUE),
+              layerId = ~DISTRICT,
+              label = ~DISTRICT, 
+              labelOptions = labelOptions(
+                style = list("font-weight" = "normal", padding = "3px 8px"),
+                textsize = "15px",
+                direction = "auto")) %>% 
+  addLegend(position = 'bottomright', pal = pal, 
+            values = map_data$total_abs_diff, title = 'Difference')
+})
+
+click_tract <- eventReactive(input$map_shape_click, {
+    x <- input$map_shape_click
+    x$id
+  })
+
+leafletOutput("map")
+  
+
+```   
+    
+### District EDIs, 2015-2016 
+
+```{r}
+
+output$district_diffs <- renderPlot({
+  if (exists(click_tract())) {
+    diff <- 100
+  } else {
+    diff <- filter(diffs, DISTRICT == click_tract()) %>% pull(DIFF)
+  }
+ggplot(diffs, aes(DIFF)) +
+  geom_histogram(fill = "lightgreen", color = "grey") +
+  labs(x = "Difference",
+       y = "") +
+    geom_vline(xintercept = diff, color = "red", linetype = "dashed") +
+    theme_minimal()
+})
+
+
+plotOutput("district_diffs")
+```
+
+About
+=====================================  
+
+This application was inspired by a study conducted by the [Silicon Valley Education Foundation (SVEF).](http://svefoundation.org/) Unfortunately, I cannot find the study anywhere, and I've contacted SVEF for assistance. The gist of the study was that teaching staffs in Silicon Valley lack ethnic diversity, and the same is true across California.
+
+About `Difference`: this measure was calculated by summing the absolute value of the percentage differences among reported ethnic groups. For example, if 50% of a district's students are white, but 80% of its teachers, a baseline of +30 is established. Further discrepancies among the ethnic groups are then added to the score. A score of 0 would indicate that the teacher and student populations have identical representations.
+
+Santa Clara Unified is represented in the table below. By summing the `Absolute_Difference` column, a `Difference` of 106 is calculated.
+
+
+```{r}
+chart_data %>% 
+  select(District = DISTRICT, Ethnicity = ETHNIC, Member, Percentage) %>% 
+  filter(District == "Santa Clara Unified") %>% 
+  spread(Member, Percentage) %>% 
+  mutate(Absolute_Difference = abs(Students-Teachers)) %>% 
+  select(-District) %>% 
+  knitr::kable()
+```
+
+Special thanks to Kyle Walker for [his amazing tigris package,](https://github.com/walkerke/tigris) and the RStudio team's [fantastic flexdashboard package.](http://rmarkdown.rstudio.com/flexdashboard/index.html) This application was also built with `ggplot2`, `shiny`, `leaflet`, my own `rCAEDDATA`, and of course, the `tidyerse`.
